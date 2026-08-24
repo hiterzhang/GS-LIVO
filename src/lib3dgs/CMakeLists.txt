@@ -4,19 +4,28 @@
 
 cmake_minimum_required(VERSION 3.24)
 project(3dgs LANGUAGES CUDA CXX)
+set(GS_LIVO_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE PATH "GS-LIVO repository root")
+set(LIBTORCH_DIR "${GS_LIVO_REPO_ROOT}/third_party/libtorch" CACHE PATH "LibTorch root")
+set(SIMPLE_KNN_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../simple-knn" CACHE PATH "simple-knn source")
+set(TINYPLY_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tinyply" CACHE PATH "tinyply source")
+set(NLOHMANN_JSON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../json" CACHE PATH "nlohmann-json source")
+set(GLM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../glm" CACHE PATH "GLM source")
+set(EIGEN_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../eigen" CACHE PATH "Eigen source")
+
+list(PREPEND CMAKE_PREFIX_PATH "${LIBTORCH_DIR}")
+add_subdirectory(${SIMPLE_KNN_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/simple-knn)
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(SHARED_LIB ON CACHE BOOL "" FORCE)
+add_subdirectory(${TINYPLY_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/tinyply)
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_subdirectory(${NLOHMANN_JSON_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/json)
+add_subdirectory(${GLM_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/glm)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
+add_subdirectory(${EIGEN_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/eigen)
 # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-gencode arch=compute_86,code=sm_86")
 # Determine the project root directory
 get_filename_component(PROJ_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}" ABSOLUTE)
-
-# Define the absolute path to libtorch
-
-
-set(SIMPLE_KNN_DIR "/usr/local") 
-include_directories(${SIMPLE_KNN_DIR}/include/simple-knn/)
-link_directories(${SIMPLE_KNN_DIR}/lib)
-
-# Set CMAKE_PREFIX_PATH
-
 
 # Core count calculation
 include(ProcessorCount)
@@ -97,7 +106,10 @@ set_target_properties(3dgs_lib PROPERTIES CUDA_ARCHITECTURES native CUDA_STANDAR
 # set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_ARCHITECTURES native CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 
 
-target_include_directories(3dgs_lib PRIVATE ${PROJECT_SOURCE_DIR}/includes ${PROJECT_SOURCE_DIR}/cuda_rasterizer ${PROJECT_SOURCE_DIR}/external/tinyply/source)
+target_include_directories(3dgs_lib PRIVATE
+  ${PROJECT_SOURCE_DIR}/includes
+  ${PROJECT_SOURCE_DIR}/cuda_rasterizer
+  ${TINYPLY_SOURCE_DIR}/source)
 
 # target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/includes ${PROJECT_SOURCE_DIR}/cuda_rasterizer ${PROJECT_SOURCE_DIR}/external/tinyply/source)
 
@@ -122,25 +134,17 @@ find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 
-set(LIBTORCH_DIR "./libtorch")
 include_directories(${LIBTORCH_DIR}/include)
 link_directories(${LIBTORCH_DIR}/lib)
 
 # set(CMAKE_PREFIX_PATH "${LIBTORCH_DIR};${CMAKE_PREFIX_PATH}")
 # find_package(Torch REQUIRED)
-find_package(Torch REQUIRED PATHS ${LIBTORCH_DIR} NO_DEFAULT_PATH)
+find_package(Torch REQUIRED PATHS "${LIBTORCH_DIR}/share/cmake/Torch" NO_DEFAULT_PATH)
 
 
 find_package(CUDA REQUIRED)
 
-find_package(tinyply REQUIRED)
-find_package(Eigen3 REQUIRED)
-
-find_package(Eigen3 3.4 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
-
-find_package(nlohmann_json REQUIRED)
-find_package(glm REQUIRED)
 find_package(Threads REQUIRED)
 
 find_package(yaml-cpp REQUIRED)

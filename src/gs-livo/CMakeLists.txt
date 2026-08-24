@@ -16,8 +16,11 @@ message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 set(PYTHON_EXECUTABLE /usr/bin/python3)
 find_package(PythonLibs REQUIRED)
 
-set(LIBTORCH_DIR "./libtorch")
-set(LIBTORCH_INCLUDE_DIR "${LIBTORCH_DIR}/include/torch/csrc/api/include")
+set(GS_LIVO_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE PATH "GS-LIVO repository root")
+set(LIBTORCH_DIR "${GS_LIVO_REPO_ROOT}/third_party/libtorch" CACHE PATH "LibTorch root")
+set(GS_LIVO_LIB3DGS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../lib3dgs" CACHE PATH "lib3dgs source root")
+set(GS_LIVO_LIB3DGS_LIBRARY "${GS_LIVO_LIB3DGS_ROOT}/build/lib3dgs_lib.so" CACHE FILEPATH "lib3dgs shared library")
+list(PREPEND CMAKE_PREFIX_PATH "${LIBTORCH_DIR}")
 
 
 set(CMAKE_CXX_STANDARD 17)
@@ -77,17 +80,11 @@ endif()
 set(PYTHON_EXECUTABLE /usr/bin/python3)
 
 
-set(SIMPLE_KNN_DIR "/usr/local") 
-include_directories(${SIMPLE_KNN_DIR}/include/simple-knn/)
-link_directories(${SIMPLE_KNN_DIR}/lib)
-
-
-set(LIBTORCH_DIR "./libtorch")
 include_directories(${LIBTORCH_DIR}/include)
 link_directories(${LIBTORCH_DIR}/lib)
 
 set(Torch_DIR "${LIBTORCH_DIR}/share/cmake/Torch")
-find_package(Torch REQUIRED)
+find_package(Torch REQUIRED PATHS "${LIBTORCH_DIR}/share/cmake/Torch" NO_DEFAULT_PATH)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")  # 添加Torch标志
 include_directories(${TORCH_INCLUDE_DIRS})
@@ -105,7 +102,6 @@ include_directories(
 
 find_package(PythonLibs REQUIRED)
 
-add_subdirectory(rpg_vikit)
 # Check for OpenMP support
 find_package(OpenMP QUIET)
 if(OpenMP_CXX_FOUND)
@@ -169,18 +165,18 @@ include_directories(
 add_library(vio src/vio.cpp src/frame.cpp src/visual_point.cpp)
 
 target_link_libraries(vio
-  /home/sheng/02GS_LIVO/lib3dgs/build/lib3dgs_lib.so
-  # ${TORCH_LIBRARIES}
-  # tinyply
-  # simple-knn
+  ${GS_LIVO_LIB3DGS_LIBRARY}
+  ${TORCH_LIBRARIES}
 )
 
-target_include_directories(vio PUBLIC   
-${CMAKE_SOURCE_DIR}/3dgs/includes 
-${CMAKE_SOURCE_DIR}/3dgs/cuda_rasterizer 
-${CMAKE_SOURCE_DIR}/3dgs/external/tinyply/source
-${LIBTORCH_INCLUDE_DIR}
-)
+target_include_directories(vio PUBLIC
+  ${GS_LIVO_LIB3DGS_ROOT}/includes
+  ${GS_LIVO_LIB3DGS_ROOT}/cuda_rasterizer
+  ${CMAKE_CURRENT_SOURCE_DIR}/../tinyply/source
+  ${LIBTORCH_DIR}/include
+  ${LIBTORCH_DIR}/include/torch/csrc/api/include)
+
+set_property(TARGET vio APPEND PROPERTY BUILD_RPATH "${LIBTORCH_DIR}/lib;${GS_LIVO_LIB3DGS_ROOT}/build")
 
 
 add_library(lio src/voxel_map.cpp)
@@ -205,6 +201,8 @@ target_link_libraries(fastlivo_mapping
   ${Boost_LIBRARIES}
   ${TORCH_LIBRARIES}  # 添加
 )
+
+set_property(TARGET fastlivo_mapping APPEND PROPERTY BUILD_RPATH "${LIBTORCH_DIR}/lib;${GS_LIVO_LIB3DGS_ROOT}/build")
 
 
 
