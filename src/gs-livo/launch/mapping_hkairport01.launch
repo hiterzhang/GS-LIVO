@@ -1,0 +1,20 @@
+<launch>
+  <arg name="rviz" default="true" />
+  <arg name="output_root" default="/tmp/gs-livo-hkairport01" />
+
+  <rosparam command="load" file="$(find fast_livo)/config/HKairport01.yaml" />
+  <param name="output/root_dir" value="$(arg output_root)" />
+
+  <node pkg="fast_livo" type="fastlivo_mapping" name="laserMapping" output="screen">
+    <rosparam file="$(find fast_livo)/config/camera_MARS_LVIG.yaml" />
+  </node>
+
+  <group if="$(arg rviz)">
+    <node pkg="rviz" type="rviz" name="rviz"
+          args="-d $(find fast_livo)/rviz_cfg/HKairport01.rviz" />
+  </group>
+
+  <node pkg="image_transport" type="republish" name="republish_hkairport01"
+        args="compressed in:=/left_camera/image raw out:=/left_camera/image"
+        output="screen" respawn="true" />
+</launch>
