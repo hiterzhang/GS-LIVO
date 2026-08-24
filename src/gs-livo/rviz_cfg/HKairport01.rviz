@@ -1,0 +1,71 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: camera_init
+    Frame Rate: 30
+  Displays:
+    - Class: rviz/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 5
+      Plane Cell Count: 40
+    - Class: rviz/PointCloud2
+      Name: Registered RGB Cloud
+      Enabled: true
+      Topic: /cloud_registered
+      Queue Size: 5
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: RGB8
+      Position Transformer: XYZ
+    - Class: rviz/Path
+      Name: Estimated Path
+      Enabled: true
+      Topic: /path
+      Queue Size: 10
+      Line Style: Lines
+      Line Width: 0.05
+      Color: 25; 255; 255
+    - Class: rviz/Odometry
+      Name: Odometry
+      Enabled: true
+      Topic: /aft_mapped_to_init
+      Keep: 50
+      Shape:
+        Value: Axes
+        Axes Length: 1
+        Axes Radius: 0.1
+    - Class: rviz/Image
+      Name: Input Image
+      Enabled: true
+      Image Topic: /rgb_img
+      Queue Size: 2
+    - Class: rviz/Image
+      Name: Gaussian Render
+      Enabled: true
+      Image Topic: /gs_rendered_image
+      Queue Size: 2
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 80
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.5
+      Yaw: 0.8
+Window Geometry:
+  Width: 1600
+  Height: 900
