@@ -30,6 +30,13 @@ class HKairportConfigTests(unittest.TestCase):
         self.assertAlmostEqual(camera["cam_fx"], 1444.431662789634)
         self.assertAlmostEqual(camera["cam_cy"], 1043.601026568268)
 
+    def test_gaussian_render_density_parameters(self):
+        config = yaml.safe_load(
+            (ROOT / "src/gs-livo/config/HKairport01.yaml").read_text()
+        )
+        self.assertGreaterEqual(config["scale_factor"], 100.0)
+        self.assertGreaterEqual(config["outlier_threshold3"], 10000)
+
     def test_launch_loads_dataset_files(self):
         text = (ROOT / "src/gs-livo/launch/mapping_hkairport01.launch").read_text()
         self.assertIn("HKairport01.yaml", text)

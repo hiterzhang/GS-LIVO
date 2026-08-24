@@ -11,6 +11,7 @@ which is included as part of this source code package.
 */
 
 #include "vio.h"
+#include "gaussian_submap_utils.h"
 
 #include <c10/cuda/CUDACachingAllocator.h>
 
@@ -512,7 +513,7 @@ void VIOManager::retrieveFrom_GS_Map2(vector<pointWithVar> &pg)
 
     if(sub_GSMap.size() > outlier_threshold3) {
      
-    size_t keep_size =rand() % (int)(sub_GSMap.size() * 0.5);
+    size_t keep_size = gaussianKeepCount(sub_GSMap.size(), rand());
     delete_size=sub_GSMap.size()-keep_size;
       // int pop_size = rand() % (int)(sub_GSMap.size() * 0.7);
       vector<GS_point> temp_gs;

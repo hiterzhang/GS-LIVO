@@ -3,6 +3,9 @@ import pathlib
 import tempfile
 import unittest
 
+import cv2
+import numpy as np
+
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -16,6 +19,7 @@ def load(name, path):
 
 VALIDATE = load("validate_artifacts", ROOT / "tools/validate_artifacts.py")
 VISUALIZE = load("visualize_gaussian_ply", ROOT / "tools/visualize_gaussian_ply.py")
+DOWNSAMPLE = load("downsample_pcd", ROOT / "tools/downsample_pcd.py")
 
 
 class ArtifactToolTests(unittest.TestCase):
@@ -62,6 +66,27 @@ class ArtifactToolTests(unittest.TestCase):
             xyz, rgb = VISUALIZE.read_gaussian_ply(path)
             self.assertEqual(xyz.tolist(), [[1.0, 2.0, 3.0]])
             self.assertEqual(rgb.tolist(), [[128, 128, 128]])
+
+    def test_pcd_downsample_leaf_avoids_pcl_int32_grid_overflow(self):
+        leaf = DOWNSAMPLE.safe_leaf_size((424.0, 281.0, 278.0), 0.15)
+        self.assertGreater(leaf, 0.15)
+        self.assertLessEqual(
+            DOWNSAMPLE.voxel_cell_count((424.0, 281.0, 278.0), leaf),
+            2**31 - 1,
+        )
+
+    def test_rendered_image_rejects_nearly_blank_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            blank = np.full((100, 100, 3), 255, dtype=np.uint8)
+            useful = blank.copy()
+            useful[:40, :40] = (20, 80, 160)
+            blank_path = root / "blank.png"
+            useful_path = root / "useful.png"
+            cv2.imwrite(str(blank_path), blank)
+            cv2.imwrite(str(useful_path), useful)
+            self.assertFalse(VALIDATE.validate_rendered_image(blank_path)["ok"])
+            self.assertTrue(VALIDATE.validate_rendered_image(useful_path)["ok"])
 
 
 if __name__ == "__main__":

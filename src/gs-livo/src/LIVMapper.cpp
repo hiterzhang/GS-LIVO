@@ -154,6 +154,8 @@ void LIVMapper::initializeComponents()
   vio_manager->grid_size = grid_size;
   vio_manager->patch_size = patch_size;
   vio_manager->outlier_threshold = outlier_threshold;
+  vio_manager->outlier_threshold2 = outlier_threshold2;
+  vio_manager->outlier_threshold3 = outlier_threshold3;
   vio_manager->setImuToLidarExtrinsic(extT, extR);
   vio_manager->setLidarToCameraExtrinsic(cameraextrinR, cameraextrinT);
   vio_manager->state = &_state;
@@ -537,32 +539,21 @@ void LIVMapper::savePCD()
   if (pcd_save_en && (pcl_wait_save->points.size() > 0 || pcl_wait_save_intensity->points.size() > 0) && pcd_save_interval < 0) 
   {
     const auto raw_points_dir = outputPath("pointcloud", "all_raw_points.pcd");
-    const auto downsampled_points_dir = outputPath("pointcloud", "all_downsampled_points.pcd");
     pcl::PCDWriter pcd_writer;
 
     if (img_en)
     {
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampled_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-      pcl::VoxelGrid<pcl::PointXYZRGB> voxel_filter;
-      voxel_filter.setInputCloud(pcl_wait_save);
-      voxel_filter.setLeafSize(filter_size_pcd, filter_size_pcd, filter_size_pcd);
-      voxel_filter.filter(*downsampled_cloud);
-  
       pcd_writer.writeBinary(raw_points_dir.string(), *pcl_wait_save); // Save the raw point cloud data
       std::cout << GREEN << "Raw point cloud data saved to: " << raw_points_dir 
                 << " with point count: " << pcl_wait_save->points.size() << RESET << std::endl;
-      
-      pcd_writer.writeBinary(downsampled_points_dir.string(), *downsampled_cloud); // Save the downsampled point cloud data
-      std::cout << GREEN << "Downsampled point cloud data saved to: " << downsampled_points_dir 
-                << " with point count after filtering: " << downsampled_cloud->points.size() << RESET << std::endl;
 
       if(colmap_output_en)
       {
         fout_points << "# 3D point list with one line of data per point\n";
         fout_points << "#  POINT_ID, X, Y, Z, R, G, B, ERROR\n";
-        for (size_t i = 0; i < downsampled_cloud->size(); ++i) 
+        for (size_t i = 0; i < pcl_wait_save->size(); ++i) 
         {
-            const auto& point = downsampled_cloud->points[i];
+            const auto& point = pcl_wait_save->points[i];
             fout_points << i << " "
                         << std::fixed << std::setprecision(6)
                         << point.x << " " << point.y << " " << point.z << " "

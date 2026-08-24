@@ -95,6 +95,12 @@ wait "$gpu_pid" 2>/dev/null || true
 gpu_pid=""
 if [[ -n "$capture_pid" ]]; then wait "$capture_pid" 2>/dev/null || true; capture_pid=""; fi
 
+python3 "$repo_root/tools/downsample_pcd.py" \
+  "$run_dir/pointcloud/all_raw_points.pcd" \
+  "$run_dir/pointcloud/all_downsampled_points.pcd" \
+  --leaf 0.15 > "$run_dir/logs/downsample_pcd.log" 2>&1
+downsample_status=$?
+
 dataset_sha256="not-computed-for-validation-run"
 if [[ "$phase" == "full" ]]; then
   sha256sum "$dataset" > "$run_dir/logs/dataset.sha256"
@@ -117,6 +123,6 @@ validation_status=$?
 (cd "$run_dir" && find . -type f ! -name checksums.sha256 -print0 | sort -z | xargs -0 sha256sum > checksums.sha256)
 printf '%s\n' "$run_dir"
 
-if [[ "$bag_status" -ne 0 || "$launch_status" -ne 0 || "$validation_status" -ne 0 ]]; then
+if [[ "$bag_status" -ne 0 || "$launch_status" -ne 0 || "$downsample_status" -ne 0 || "$validation_status" -ne 0 ]]; then
   exit 1
 fi

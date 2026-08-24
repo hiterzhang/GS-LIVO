@@ -5,12 +5,18 @@ import math
 import pathlib
 import re
 
+import cv2
+import numpy as np
+
 
 FATAL_PATTERNS = (
     "CUDA out of memory",
     "Segmentation fault",
     "terminate called",
     "[FATAL]",
+    "process has died",
+    "return value -11",
+    "exit code -8",
 )
 REQUIRED_PLY_PROPERTIES = {
     "x", "y", "z", "f_dc_0", "f_dc_1", "f_dc_2",
@@ -77,6 +83,19 @@ def validate_log(path):
     return {"ok": not matches, "fatal_patterns": matches}
 
 
+def validate_rendered_image(path, minimum_coverage=0.05):
+    image = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    if image is None:
+        return {"ok": False, "bytes": 0, "coverage": 0.0, "reason": "unreadable"}
+    coverage = float(np.mean(np.any(image < 245, axis=2)))
+    return {
+        "ok": coverage >= minimum_coverage,
+        "bytes": path.stat().st_size,
+        "coverage": coverage,
+        "reason": "" if coverage >= minimum_coverage else "nearly blank",
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("run_dir")
@@ -93,7 +112,7 @@ def main():
         "cloud_topic": {"bytes": (root / "logs/topic_cloud_registered.txt").stat().st_size},
         "render_topic": {"bytes": (root / "logs/topic_gs_rendered_image.txt").stat().st_size},
         "input_image": {"bytes": (root / "visualization/input.png").stat().st_size},
-        "rendered_image": {"bytes": (root / "visualization/rendered.png").stat().st_size},
+        "rendered_image": validate_rendered_image(root / "visualization/rendered.png"),
         "gaussian_html": {"bytes": (root / "visualization/gaussian_map.html").stat().st_size},
     }
     artifacts["raw_pcd"]["ok"] = artifacts["raw_pcd"]["count"] > 0
@@ -102,7 +121,6 @@ def main():
     artifacts["cloud_topic"]["ok"] = artifacts["cloud_topic"]["bytes"] > 0
     artifacts["render_topic"]["ok"] = artifacts["render_topic"]["bytes"] > 0
     artifacts["input_image"]["ok"] = artifacts["input_image"]["bytes"] > 0
-    artifacts["rendered_image"]["ok"] = artifacts["rendered_image"]["bytes"] > 0
     artifacts["gaussian_html"]["ok"] = artifacts["gaussian_html"]["bytes"] > 0
     manifest = json.loads((root / "run_manifest.yaml").read_text())
     if manifest["run"]["phase"] == "full":

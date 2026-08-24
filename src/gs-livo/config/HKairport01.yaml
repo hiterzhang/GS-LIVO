@@ -99,6 +99,8 @@ gs:
   gs_scaling_lr: 1.8
   gs_rotation_lr: 0.01
 
-scale_factor: 0.035
+outlier_threshold2: 10000
+outlier_threshold3: 10000
+scale_factor: 200.0
 root_voxel_size: 0.01
 octree_max_level: 3

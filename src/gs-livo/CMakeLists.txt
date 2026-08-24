@@ -225,4 +225,10 @@ if(CATKIN_ENABLE_TESTING)
   if(TARGET test_gaussian_map_io)
     target_include_directories(test_gaussian_map_io PRIVATE include ${GS_LIVO_LIB3DGS_ROOT}/includes)
   endif()
+
+  catkin_add_gtest(test_gaussian_submap_utils test/test_gaussian_submap_utils.cpp)
+  if(TARGET test_gaussian_submap_utils)
+    target_include_directories(test_gaussian_submap_utils PRIVATE include)
+  endif()
+
 endif()
