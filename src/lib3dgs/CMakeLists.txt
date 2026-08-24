@@ -10,7 +10,6 @@ set(SIMPLE_KNN_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../simple-knn" CACHE PATH
 set(TINYPLY_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tinyply" CACHE PATH "tinyply source")
 set(NLOHMANN_JSON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../json" CACHE PATH "nlohmann-json source")
 set(GLM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../glm" CACHE PATH "GLM source")
-set(EIGEN_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../eigen" CACHE PATH "Eigen source")
 
 list(PREPEND CMAKE_PREFIX_PATH "${LIBTORCH_DIR}")
 add_subdirectory(${SIMPLE_KNN_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/simple-knn)
@@ -20,9 +19,7 @@ add_subdirectory(${TINYPLY_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/tinyply)
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 add_subdirectory(${NLOHMANN_JSON_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/json)
 add_subdirectory(${GLM_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/glm)
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
-add_subdirectory(${EIGEN_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/eigen)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};-gencode arch=compute_86,code=sm_86")
 # Determine the project root directory
 get_filename_component(PROJ_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}" ABSOLUTE)

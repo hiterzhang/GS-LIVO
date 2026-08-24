@@ -11,6 +11,7 @@ which is included as part of this source code package.
 */
 
 #include "LIVMapper.h"
+#include "gaussian_map_io.h"
 
 LIVMapper::LIVMapper(ros::NodeHandle &nh)
     : extT(0, 0, 0),
@@ -119,6 +120,8 @@ void LIVMapper::readParameters(ros::NodeHandle &nh)
   nh.param<double>("scale_factor2", scale_factor2, 3.4);
   nh.param<double>("root_voxel_size", root_voxel_size, 0.5);
   nh.param<int>("octree_max_level", octree_max_level, 3);
+  nh.param<double>("gs/map_voxel_size", gs_map_voxel_size, 3.0);
+  nh.param<double>("gs/normal_rejecter", normal_rejecter, 0.0);
 
   nh.param<int>("gs/gs_iterations", gs_iterations, 4);
   nh.param<int>("gs/border_gs",  border_gs, 4);
@@ -128,6 +131,9 @@ void LIVMapper::readParameters(ros::NodeHandle &nh)
   nh.param<double>("gs/gs_opacity_lr", gs_opacity_lr, 0.05);
   nh.param<double>("gs/gs_scaling_lr", gs_scaling_lr,0.001);
   nh.param<double>("gs/gs_rotation_lr", gs_rotation_lr, 0.001);
+  nh.param<std::string>("output/root_dir", output_root_dir, std::string(ROOT_DIR) + "Log");
+  nh.param<bool>("output/gaussian_save_en", gaussian_save_en, true);
+  nh.param<bool>("output/visualization_save_en", visualization_save_en, true);
   
 // 3dgs parameters
 
@@ -169,6 +175,8 @@ void LIVMapper::initializeComponents()
   vio_manager->scale_factor2= (root_voxel_size/octree_max_level)*scale_factor;
   vio_manager->normal_rejecter= (normal_rejecter);
   vio_manager->save_GS_iter=save_GS_iter;
+  vio_manager->gs_map_voxel_size = gs_map_voxel_size;
+  vio_manager->border_gs = border_gs;
   vio_manager->root_voxel_size= root_voxel_size;
   vio_manager->octree_max_level= octree_max_level;
   vio_manager->gs_params.iterations = gs_iterations;
@@ -178,7 +186,6 @@ void LIVMapper::initializeComponents()
   vio_manager->gs_params.opacity_lr = gs_opacity_lr;
   vio_manager->gs_params.scaling_lr = gs_scaling_lr;
   vio_manager->gs_params.rotation_lr = gs_rotation_lr;
-  // vio_manager->border_gs = border_gs;
   // 3dgs parameters
 
 
@@ -204,6 +211,9 @@ void LIVMapper::initializeComponents()
 
 void LIVMapper::initializeFiles() 
 {
+  for (const auto *directory : {"trajectory", "pointcloud", "gaussian", "logs", "visualization"})
+    std::filesystem::create_directories(outputPath(directory, ""));
+
   if (pcd_save_en && colmap_output_en)
   {
       const std::string folderPath = std::string(ROOT_DIR) + "/scripts/colmap_output.sh";
@@ -224,8 +234,8 @@ void LIVMapper::initializeFiles()
   }
   if(colmap_output_en) fout_points.open(std::string(ROOT_DIR) + "Log/Colmap/sparse/0/points3D.txt", std::ios::out);
   if(pcd_save_interval > 0) fout_pcd_pos.open(std::string(ROOT_DIR) + "Log/PCD/scans_pos.json", std::ios::out);
-  fout_pre.open(DEBUG_FILE_DIR("mat_pre.txt"), std::ios::out);
-  fout_out.open(DEBUG_FILE_DIR("mat_out.txt"), std::ios::out);
+  fout_pre.open(outputPath("logs", "mat_pre.txt"), std::ios::out);
+  fout_out.open(outputPath("logs", "mat_out.txt"), std::ios::out);
 }
 
 void LIVMapper::initializeSubscribersAndPublishers(ros::NodeHandle &nh, image_transport::ImageTransport &it) 
@@ -250,6 +260,7 @@ void LIVMapper::initializeSubscribersAndPublishers(ros::NodeHandle &nh, image_tr
   pubLaserCloudDynDbg = nh.advertise<sensor_msgs::PointCloud2>("/dyn_obj_dbg_hist", 100);
   mavros_pose_publisher = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 10);
   pubImage = it.advertise("/rgb_img", 1);
+  pubRenderedImage = it.advertise("/gs_rendered_image", 1);
   pubImuPropOdom = nh.advertise<nav_msgs::Odometry>("/LIVO2/imu_propagate", 10000);
   imu_prop_timer = nh.createTimer(ros::Duration(0.004), &LIVMapper::imu_prop_callback, this);
   voxelmap_manager->voxel_map_pub_= nh.advertise<visualization_msgs::MarkerArray>("/planes", 10000);
@@ -425,15 +436,16 @@ void LIVMapper::handleLIO()
     static bool pos_opend = false;
     static int ocount = 0;
     std::ofstream outFile, evoFile;
+    const auto trajectory_file = outputPath("trajectory", seq_name + ".txt");
     if (!pos_opend) 
     {
-      evoFile.open(std::string(ROOT_DIR) + "Log/result/" + seq_name + ".txt", std::ios::out);
+      evoFile.open(trajectory_file.string(), std::ios::out);
       pos_opend = true;
       if (!evoFile.is_open()) ROS_ERROR("open fail\n");
     } 
     else 
     {
-      evoFile.open(std::string(ROOT_DIR) + "Log/result/" + seq_name + ".txt", std::ios::app);
+      evoFile.open(trajectory_file.string(), std::ios::app);
       if (!evoFile.is_open()) ROS_ERROR("open fail\n");
     }
     Eigen::Matrix4d outT;
@@ -524,8 +536,8 @@ void LIVMapper::savePCD()
 {
   if (pcd_save_en && (pcl_wait_save->points.size() > 0 || pcl_wait_save_intensity->points.size() > 0) && pcd_save_interval < 0) 
   {
-    std::string raw_points_dir = std::string(ROOT_DIR) + "Log/PCD/all_raw_points.pcd";
-    std::string downsampled_points_dir = std::string(ROOT_DIR) + "Log/PCD/all_downsampled_points.pcd";
+    const auto raw_points_dir = outputPath("pointcloud", "all_raw_points.pcd");
+    const auto downsampled_points_dir = outputPath("pointcloud", "all_downsampled_points.pcd");
     pcl::PCDWriter pcd_writer;
 
     if (img_en)
@@ -536,11 +548,11 @@ void LIVMapper::savePCD()
       voxel_filter.setLeafSize(filter_size_pcd, filter_size_pcd, filter_size_pcd);
       voxel_filter.filter(*downsampled_cloud);
   
-      pcd_writer.writeBinary(raw_points_dir, *pcl_wait_save); // Save the raw point cloud data
+      pcd_writer.writeBinary(raw_points_dir.string(), *pcl_wait_save); // Save the raw point cloud data
       std::cout << GREEN << "Raw point cloud data saved to: " << raw_points_dir 
                 << " with point count: " << pcl_wait_save->points.size() << RESET << std::endl;
       
-      pcd_writer.writeBinary(downsampled_points_dir, *downsampled_cloud); // Save the downsampled point cloud data
+      pcd_writer.writeBinary(downsampled_points_dir.string(), *downsampled_cloud); // Save the downsampled point cloud data
       std::cout << GREEN << "Downsampled point cloud data saved to: " << downsampled_points_dir 
                 << " with point count after filtering: " << downsampled_cloud->points.size() << RESET << std::endl;
 
@@ -563,11 +575,42 @@ void LIVMapper::savePCD()
     }
     else
     {      
-      pcd_writer.writeBinary(raw_points_dir, *pcl_wait_save_intensity);
+      pcd_writer.writeBinary(raw_points_dir.string(), *pcl_wait_save_intensity);
       std::cout << GREEN << "Raw point cloud data saved to: " << raw_points_dir 
                 << " with point count: " << pcl_wait_save_intensity->points.size() << RESET << std::endl;
     }
   }
+}
+
+std::filesystem::path LIVMapper::outputPath(
+    const std::string &category,
+    const std::string &name) const
+{
+  return std::filesystem::path(output_root_dir) / category / name;
+}
+
+void LIVMapper::saveGaussianMap()
+{
+  if (!gaussian_save_en || !vio_manager) return;
+  const auto points = vio_manager->snapshotGaussianMap();
+  const auto result = writeGaussianPly(
+      outputPath("gaussian", "global_gaussians.ply"), points);
+  if (!result.ok)
+  {
+    ROS_ERROR_STREAM("Gaussian map export failed: " << result.error);
+    return;
+  }
+  ROS_INFO_STREAM("Gaussian map saved with " << result.count << " vertices");
+}
+
+void LIVMapper::saveVisualizationFrames()
+{
+  if (!visualization_save_en || !vio_manager) return;
+  std::filesystem::create_directories(outputPath("visualization", ""));
+  if (!vio_manager->img_undistort.empty())
+    cv::imwrite(outputPath("visualization", "input.png").string(), vio_manager->img_undistort);
+  if (!vio_manager->img_rendered.empty())
+    cv::imwrite(outputPath("visualization", "rendered.png").string(), vio_manager->img_rendered);
 }
 
 void LIVMapper::run() 
@@ -590,6 +633,8 @@ void LIVMapper::run()
     stateEstimationAndMapping();
   }
   savePCD();
+  saveGaussianMap();
+  saveVisualizationFrames();
 }
 
 void LIVMapper::prop_imu_once(StatesGroup &imu_prop_state, const double dt, V3D acc_avr, V3D angvel_avr)
@@ -1155,6 +1200,15 @@ void LIVMapper::publish_img_rgb(const image_transport::Publisher &pubImage, VIOM
   out_msg.encoding = sensor_msgs::image_encodings::BGR8;
   out_msg.image = img_rgb;
   pubImage.publish(out_msg.toImageMsg());
+
+  if (!vio_manager->img_rendered.empty())
+  {
+    cv_bridge::CvImage rendered_msg;
+    rendered_msg.header.stamp = ros::Time::now();
+    rendered_msg.encoding = sensor_msgs::image_encodings::BGR8;
+    rendered_msg.image = vio_manager->img_rendered;
+    pubRenderedImage.publish(rendered_msg.toImageMsg());
+  }
 }
 
 void LIVMapper::publish_frame_world(const ros::Publisher &pubLaserCloudFullRes, VIOManagerPtr vio_manager)

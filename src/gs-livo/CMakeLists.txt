@@ -158,11 +158,19 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${Sophus_INCLUDE_DIRS}
+  ${GS_LIVO_LIB3DGS_ROOT}/includes
+  ${GS_LIVO_LIB3DGS_ROOT}/cuda_rasterizer
+  ${CMAKE_CURRENT_SOURCE_DIR}/../simple-knn
+  ${CMAKE_CURRENT_SOURCE_DIR}/../tinyply/source
+  ${CMAKE_CURRENT_SOURCE_DIR}/../json/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../glm
+  ${LIBTORCH_DIR}/include
+  ${LIBTORCH_DIR}/include/torch/csrc/api/include
   include
 )
 
 # Add libraries
-add_library(vio src/vio.cpp src/frame.cpp src/visual_point.cpp)
+add_library(vio src/vio.cpp src/frame.cpp src/visual_point.cpp src/gaussian_map_io.cpp)
 
 target_link_libraries(vio
   ${GS_LIVO_LIB3DGS_LIBRARY}
@@ -172,6 +180,7 @@ target_link_libraries(vio
 target_include_directories(vio PUBLIC
   ${GS_LIVO_LIB3DGS_ROOT}/includes
   ${GS_LIVO_LIB3DGS_ROOT}/cuda_rasterizer
+  ${CMAKE_CURRENT_SOURCE_DIR}/../simple-knn
   ${CMAKE_CURRENT_SOURCE_DIR}/../tinyply/source
   ${LIBTORCH_DIR}/include
   ${LIBTORCH_DIR}/include/torch/csrc/api/include)
@@ -209,4 +218,11 @@ set_property(TARGET fastlivo_mapping APPEND PROPERTY BUILD_RPATH "${LIBTORCH_DIR
 # Link mimalloc if found
 if(mimalloc_FOUND)
   target_link_libraries(fastlivo_mapping mimalloc)
+endif()
+
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(test_gaussian_map_io test/test_gaussian_map_io.cpp src/gaussian_map_io.cpp)
+  if(TARGET test_gaussian_map_io)
+    target_include_directories(test_gaussian_map_io PRIVATE include ${GS_LIVO_LIB3DGS_ROOT}/includes)
+  endif()
 endif()

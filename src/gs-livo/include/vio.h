@@ -13,6 +13,8 @@ which is included as part of this source code package.
 #ifndef VIO_H_
 #define VIO_H_
 
+#include <torch/torch.h>
+
 #include "voxel_map.h"
 
 #include "GSVoxelOctree.h"
@@ -28,8 +30,6 @@ which is included as part of this source code package.
 
 
 // sheng 3dgs 头文件
-#include <torch/torch.h>
-
 #include "debug_utils.cuh"
 #include "gaussian.cuh"
 #include "loss_monitor.cuh"
@@ -155,6 +155,7 @@ public:
 
   double scale_factor,scale_factor2,normal_rejecter;
   int save_GS_iter;
+  double gs_map_voxel_size = 3.0;
   double root_voxel_size;
   int octree_max_level;
 
@@ -226,6 +227,7 @@ public:
   void setImuToLidarExtrinsic(const V3D &transl, const M3D &rot);
   void setLidarToCameraExtrinsic(vector<double> &R, vector<double> &P);
   void initializeVIO();
+  std::vector<GS_point> snapshotGaussianMap();
   void getImagePatch(cv::Mat img, V2D pc, float *patch_tmp, int level);
   void computeProjectionJacobian(V3D p, MD(2, 3) & J);
   void computeJacobianAndUpdateEKF(cv::Mat img);

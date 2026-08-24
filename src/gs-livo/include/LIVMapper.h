@@ -13,13 +13,14 @@ which is included as part of this source code package.
 #ifndef LIV_MAPPER_H
 #define LIV_MAPPER_H
 
-#include "IMU_Processing.h"
 #include "vio.h"
+#include "IMU_Processing.h"
 #include "preprocess.h"
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <nav_msgs/Path.h>
 #include <vikit/camera_loader.h>
+#include <filesystem>
 
 class LIVMapper
 {
@@ -36,6 +37,9 @@ public:
   void handleVIO();
   void handleLIO();
   void savePCD();
+  void saveGaussianMap();
+  void saveVisualizationFrames();
+  std::filesystem::path outputPath(const std::string &category, const std::string &name) const;
   void processImu();
   
   bool sync_packages(LidarMeasureGroup &meas);
@@ -102,8 +106,11 @@ public:
 
 
   // 3dgs parameters
-  double scale_factor,scale_factor2,normal_rejecter;
-  int save_GS_iter;
+  double scale_factor = 3.4;
+  double scale_factor2 = 3.4;
+  double normal_rejecter = 0.0;
+  int save_GS_iter = 0;
+  double gs_map_voxel_size = 3.0;
   double root_voxel_size;
   int octree_max_level;
   double photometric_thre;
@@ -200,6 +207,7 @@ public:
   ros::Publisher pubLaserCloudDynRmed;
   ros::Publisher pubLaserCloudDynDbg;
   image_transport::Publisher pubImage;
+  image_transport::Publisher pubRenderedImage;
   ros::Publisher mavros_pose_publisher;
   ros::Timer imu_prop_timer;
 
@@ -208,5 +216,8 @@ public:
   double aver_time_icp = 0;
   double aver_time_map_inre = 0;
   bool colmap_output_en = false;
+  std::string output_root_dir;
+  bool gaussian_save_en = true;
+  bool visualization_save_en = true;
 };
 #endif

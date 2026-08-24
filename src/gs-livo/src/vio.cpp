@@ -46,7 +46,7 @@ void VIOManager::initializeVIO()
 
 
 
-  gsmap_manager.reset(new GSMapManager(gs_octree, 3, 3)); // voxel_size 0.5m max_level 3
+  gsmap_manager.reset(new GSMapManager(gs_octree, gs_map_voxel_size, octree_max_level));
   cout << GREEN << "root_voxel_size: " << root_voxel_size << " octree_max_level: " << octree_max_level << endl << RESET;
 
   fx = cam->fx();
@@ -192,6 +192,24 @@ void VIOManager::initializeVIO()
   append_voxel_points.reserve(length);
 
   sub_feat_map.clear();
+}
+
+std::vector<GS_point> VIOManager::snapshotGaussianMap()
+{
+  std::vector<GS_point> points(sub_GSMap.begin(), sub_GSMap.end());
+  if (!gsmap_manager) return points;
+
+  for (auto &entry : gsmap_manager->gs_map_)
+  {
+    if (entry.second == nullptr) continue;
+    std::vector<GS_point *> voxel_points;
+    entry.second->get_all_gs_points(voxel_points);
+    for (const auto *point : voxel_points)
+    {
+      if (point != nullptr) points.push_back(*point);
+    }
+  }
+  return points;
 }
 
 void VIOManager::resetGrid()
@@ -524,7 +542,7 @@ void VIOManager::retrieveFrom_GS_Map2(vector<pointWithVar> &pg)
         float loc_xyz[3];
         V3D pt_w = pg[i].point_w;
         
-        float voxel_size = root_voxel_size;
+        float voxel_size = gsmap_manager->voxel_size_;
 
         for (int j = 0; j < 3; j++)
         {

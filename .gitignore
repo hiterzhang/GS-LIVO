@@ -1,11 +1,13 @@
 .worktrees/
 /build/
 /devel/
+/.catkin_workspace
 /third_party/
 /build_logs/
 /results
 /preflight.json
 /src/CMakeLists.txt
+/src/lib3dgs/build/
 /src/gs-livo/Log/
 __pycache__/
 *.pyc
