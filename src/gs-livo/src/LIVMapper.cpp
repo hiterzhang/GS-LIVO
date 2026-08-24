@@ -551,7 +551,7 @@ void LIVMapper::savePCD()
       {
         fout_points << "# 3D point list with one line of data per point\n";
         fout_points << "#  POINT_ID, X, Y, Z, R, G, B, ERROR\n";
-        for (size_t i = 0; i < pcl_wait_save->size(); ++i) 
+        for (size_t i = 0; i < pcl_wait_save->size(); ++i)
         {
             const auto& point = pcl_wait_save->points[i];
             fout_points << i << " "

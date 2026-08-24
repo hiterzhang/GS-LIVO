@@ -5,6 +5,7 @@
 /third_party/
 /build_logs/
 /results
+/output/
 /preflight.json
 /src/CMakeLists.txt
 /src/lib3dgs/build/
