@@ -1,1 +1,11 @@
 .worktrees/
+/build/
+/devel/
+/third_party/
+/build_logs/
+/results
+/preflight.json
+/src/CMakeLists.txt
+/src/gs-livo/Log/
+__pycache__/
+*.pyc
